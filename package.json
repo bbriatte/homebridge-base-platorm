@@ -1,0 +1,17 @@
+{
+  "name": "homebridge-base-platform",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "keywords": [
+    "homebridge",
+    "platform"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/bbriatte/homebridge-base-platform.git"
+  },
+  "author": "bbriatte",
+  "license": "BSD"
+}
