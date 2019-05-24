@@ -1,15 +1,13 @@
-import {Logger} from './logger';
+import {Context} from './context';
+import {ContextProxy} from './context-proxy';
 
-export class HomebridgeAccessory<Device> {
-    readonly log: Logger;
-    readonly homebridge: any;
+export class HomebridgeAccessoryWrapper<Device> extends ContextProxy {
     readonly accessory: any;
     readonly device: Device;
 
-    public constructor(log: Logger, accessory: any, homebridge: any, device: Device) {
-        this.log = log;
+    public constructor(context: Context, accessory: any, device: Device) {
+        super(context);
         this.accessory = accessory;
-        this.homebridge = homebridge;
         this.device = device;
     }
 
@@ -22,16 +20,15 @@ export class HomebridgeAccessory<Device> {
         if (!service) {
             return this.accessory.addService(serviceType, displayName, subType);
         } else if(service.displayName !== displayName) {
-            const Characteristic = this.homebridge.hap.Characteristic;
-            const nameCharacteristic = service.getCharacteristic(Characteristic.Name)
-                || service.addCharacteristic(Characteristic.Name);
+            const nameCharacteristic = service.getCharacteristic(this.Characteristic.Name)
+                || service.addCharacteristic(this.Characteristic.Name);
             nameCharacteristic.setValue(displayName);
             service.displayName = displayName;
         }
         return service;
     }
 
-    public removeService(serviceType: any, subType: string) {
+    public removeService(serviceType: any, subType: string): void {
         const service = this.accessory.getServiceByUUIDAndSubType(serviceType, subType);
         if(service !== undefined) {
             this.accessory.removeService(service);

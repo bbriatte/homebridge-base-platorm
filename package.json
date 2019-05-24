@@ -1,7 +1,7 @@
 {
   "name": "homebridge-base-platform",
-  "version": "1.0.0",
-  "description": "",
+  "version": "1.1.0",
+  "description": "Helper used to build homebridge platform easier",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "keywords": [

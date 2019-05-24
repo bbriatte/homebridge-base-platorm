@@ -1,48 +1,85 @@
 import {Logger} from './logger';
-import {HomebridgeAccessory} from './accessory';
-import {PlatformConfig} from './platform-config';
+import {HomebridgeAccessoryWrapper} from './accessory-wrapper';
+import {PlatformSettings} from './platform-settings';
+import {Context} from './context';
+import {ContextProxy} from './context-proxy';
 
-export abstract class HomebridgePlatform<Config extends PlatformConfig, Device, Accessory extends HomebridgeAccessory<Device>> {
+type HomebridgeAccessoryWrapperConstructor<AccessoryWrapper extends HomebridgeAccessoryWrapper<Device>, Device> = { new (context: Context, accessory: any, device: Device): AccessoryWrapper };
 
-    readonly log: Logger;
-    readonly config: Config;
-    protected readonly _accessories: any[]; // homebridge registry
-    protected accessories: Accessory[];
+export abstract class HomebridgePlatform<Config, Device extends {[key: string]: any}, AccessoryWrapper extends HomebridgeAccessoryWrapper<Device>> extends ContextProxy {
 
-    constructor(log: Logger, config: Config, homebridge: any) {
-        this.log = log;
+    protected readonly config: Config;
+    protected readonly settings: PlatformSettings;
+    protected readonly accessories: any[]; // homebridge registry
+    protected accessoryWrappers: AccessoryWrapper[];
+
+    protected constructor(log: Logger, config: Config, homebridge: any) {
+        super(new Context(log, homebridge));
         this.config = config;
-        this._accessories = [];
-        homebridge.on('didFinishLaunching', async () => {
-            if(config) {
-                this.log('Searching accessories...');
-                this.accessories = await this.searchAccessories(homebridge);
-                this.clearUnreachableAccessories(homebridge);
-                this.log('Finish searching accessories');
-            } else {
-                this.log.error('No config provided');
-            }
-        });
+        this.settings = this.initPlatformSettings();
+        this.accessories = [];
+        homebridge.on('didFinishLaunching', this.main.bind(this));
+        homebridge.on('shutdown', this.shutdown.bind(this));
     }
 
-    protected abstract getPluginName(): string;
+    protected abstract initPlatformSettings(): PlatformSettings;
 
-    protected async abstract searchAccessories(homebridge: any): Promise<Accessory[]>;
+    protected abstract getAccessoryWrapperConstructorForDevice(device: Device): HomebridgeAccessoryWrapperConstructor<AccessoryWrapper, Device> | undefined
+
+    protected async abstract searchDevices(): Promise<Device>
+
+    protected main(): void {
+        this.context.log('Searching accessories...');
+        this.searchAccessories()
+            .then((accessories) => {
+                this.accessoryWrappers = accessories;
+                this.clearUnreachableAccessories();
+                this.context.log('Finish searching accessories');
+            })
+            .catch((err) => this.context.log.error(err));
+    }
+
+    protected shutdown(): void {
+        // default does nothing
+    }
+
+    protected async searchAccessories(): Promise<AccessoryWrapper[]> {
+        const devices = await this.searchDevices();
+        const accessories = devices.map((device) => this.accessoryFromDevice(device));
+        return accessories.filter((acc) => acc !== undefined);
+    }
+
+    protected accessoryFromDevice(device: Device): AccessoryWrapper | undefined {
+        const AccessoryWrapperConstructor = this.getAccessoryWrapperConstructorForDevice(device);
+        if(AccessoryWrapperConstructor === undefined) {
+            return undefined;
+        }
+        const uuid = this.context.uuid.generate(device[this.settings.deviceKeys.id]);
+        const cachedAccessory = this.accessories.find((item) => item.UUID === uuid);
+        if(cachedAccessory) {
+            return new AccessoryWrapperConstructor(this.context, cachedAccessory, device);
+        }
+        const accessory = new this.context.homebridge.platformAccessory(device[this.settings.deviceKeys.name], uuid);
+        const accessoryWrapper = new AccessoryWrapperConstructor(this.context, accessory, device);
+        this.configureAccessory(accessory);
+        this.context.homebridge.registerPlatformAccessories(this.settings.plugin, this.settings.name, [accessory]);
+        return accessoryWrapper;
+    }
 
     configureAccessory(accessory: any) {
         accessory.reachable = true;
-        this._accessories.push(accessory);
+        this.accessories.push(accessory);
     }
 
-    protected clearUnreachableAccessories(homebridge: any) {
-        const unreachableAccessories = this._accessories.filter((cachedAccessory) => {
-            return this.accessories.some((acc: Accessory) => {
+    protected clearUnreachableAccessories() {
+        const unreachableAccessories = this.accessories.filter((cachedAccessory) => {
+            return this.accessoryWrappers.some((acc: AccessoryWrapper) => {
                 return acc.accessory.UUID === cachedAccessory.UUID;
             }) === false;
         });
         if(unreachableAccessories.length > 0) {
             unreachableAccessories.forEach((acc) => acc.reachable = false);
-            homebridge.unregisterPlatformAccessories(this.getPluginName(), this.config.platform, unreachableAccessories);
+            this.context.homebridge.unregisterPlatformAccessories(this.settings.plugin, this.settings.name, unreachableAccessories);
         }
     }
 }
