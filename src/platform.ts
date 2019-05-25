@@ -26,7 +26,7 @@ export abstract class HomebridgePlatform<Config, Device extends {[key: string]: 
 
     protected abstract getAccessoryWrapperConstructorForDevice(device: Device): HomebridgeAccessoryWrapperConstructor<AccessoryWrapper, Device> | undefined
 
-    protected async abstract searchDevices(): Promise<Device>
+    protected async abstract searchDevices(): Promise<Device[]>
 
     protected main(): void {
         this.context.log('Searching accessories...');
