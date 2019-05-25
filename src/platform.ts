@@ -4,7 +4,7 @@ import {PlatformSettings} from './platform-settings';
 import {Context} from './context';
 import {ContextProxy} from './context-proxy';
 
-type HomebridgeAccessoryWrapperConstructor<AccessoryWrapper extends HomebridgeAccessoryWrapper<Device>, Device> = { new (context: Context, accessory: any, device: Device): AccessoryWrapper };
+export type HomebridgeAccessoryWrapperConstructor<AccessoryWrapper extends HomebridgeAccessoryWrapper<Device>, Device> = { new (context: Context, accessory: any, device: Device): AccessoryWrapper };
 
 export abstract class HomebridgePlatform<Config, Device extends {[key: string]: any}, AccessoryWrapper extends HomebridgeAccessoryWrapper<Device>> extends ContextProxy {
 
