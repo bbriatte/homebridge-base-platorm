@@ -3,10 +3,11 @@ import {HomebridgeAccessoryWrapper} from './accessory-wrapper';
 import {PlatformSettings} from './platform-settings';
 import {Context} from './context';
 import {ContextProxy} from './context-proxy';
+import {PlatformConfig} from './platform-config';
 
 export type HomebridgeAccessoryWrapperConstructor<AccessoryWrapper extends HomebridgeAccessoryWrapper<Device>, Device> = { new (context: Context, accessory: any, device: Device): AccessoryWrapper };
 
-export abstract class HomebridgePlatform<Config, Device extends {[key: string]: any}, AccessoryWrapper extends HomebridgeAccessoryWrapper<Device>> extends ContextProxy {
+export abstract class HomebridgePlatform<Config extends PlatformConfig, Device extends {[key: string]: any}, AccessoryWrapper extends HomebridgeAccessoryWrapper<Device>> extends ContextProxy {
 
     protected readonly config: Config;
     protected readonly settings: PlatformSettings;
@@ -15,12 +16,25 @@ export abstract class HomebridgePlatform<Config, Device extends {[key: string]: 
 
     protected constructor(log: Logger, config: Config, homebridge: any) {
         super(new Context(log, homebridge));
-        this.config = config;
         this.settings = this.initPlatformSettings();
+        this.config = this.initPlatformConfig(config);
         this.accessories = [];
         homebridge.on('didFinishLaunching', this.main.bind(this));
         homebridge.on('shutdown', this.shutdown.bind(this));
     }
+
+    protected initPlatformConfig(config?: Config): Config {
+        if(!config) {
+            this.log.warn(`Missing configuration from the Homebridge config.json you need to register the plugin using the following key {"platform: ${this.settings.name}"}, use the default configuration`);
+            config = this.getDefaultPlatformConfig();
+        }
+        if(!config || config.platform !== this.settings.name) {
+            throw new Error(`Invalid platform configuration '${config}', you must edit your Homebridge config.json file`);
+        }
+        return config;
+    }
+
+    protected abstract getDefaultPlatformConfig(): Config | undefined;
 
     protected abstract initPlatformSettings(): PlatformSettings;
 
@@ -54,12 +68,12 @@ export abstract class HomebridgePlatform<Config, Device extends {[key: string]: 
         if(AccessoryWrapperConstructor === undefined) {
             return undefined;
         }
-        const uuid = this.context.uuid.generate(device[this.settings.deviceKeys.id]);
+        const uuid = this.context.uuid.generate(device[this.settings.deviceKeyMapping.id]);
         const cachedAccessory = this.accessories.find((item) => item.UUID === uuid);
         if(cachedAccessory) {
             return new AccessoryWrapperConstructor(this.context, cachedAccessory, device);
         }
-        const accessory = new this.context.homebridge.platformAccessory(device[this.settings.deviceKeys.name], uuid);
+        const accessory = new this.context.homebridge.platformAccessory(device[this.settings.deviceKeyMapping.name], uuid);
         const accessoryWrapper = new AccessoryWrapperConstructor(this.context, accessory, device);
         this.configureAccessory(accessory);
         this.context.homebridge.registerPlatformAccessories(this.settings.plugin, this.settings.name, [accessory]);

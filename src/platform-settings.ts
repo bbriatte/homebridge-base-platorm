@@ -1,7 +1,7 @@
-import {DeviceKeys} from './device-keys';
+import {DeviceKeyMapping} from './device-key-mapping';
 
 export interface PlatformSettings {
     readonly name: string;
     readonly plugin: string;
-    readonly deviceKeys: DeviceKeys
+    readonly deviceKeyMapping: DeviceKeyMapping;
 }

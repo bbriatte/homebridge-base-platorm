@@ -3,6 +3,7 @@ export * from './callback';
 export * from './logger';
 export * from './platform';
 export * from './platform-settings';
-export * from './device-keys';
+export * from './device-key-mapping';
 export * from './context';
 export * from './context-proxy';
+export * from './platform-config';
