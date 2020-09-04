@@ -1,7 +1,6 @@
 import {HomebridgeContextProps} from './context';
 import {HomebridgeContextProxy} from './context-proxy';
-import {PlatformAccessory} from "homebridge";
-import {Service, WithUUID} from "hap-nodejs";
+import {PlatformAccessory, Service, WithUUID} from "homebridge";
 
 export class HomebridgeAccessoryWrapper<Device> extends HomebridgeContextProxy {
     readonly accessory: PlatformAccessory;
