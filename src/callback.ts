@@ -5,18 +5,16 @@ export function callbackify(task: (...taskArgs: any[]) => Promise<any>): any {
 
         for (const arg of args) {
             if (typeof arg === 'function') {
-                if (typeof arg === 'function') {
-                    callback = arg;
-                    break;
-                }
-                onlyArgs.push(arg);
+                callback = arg;
+                break;
             }
-            if (!callback) {
-                throw new Error("Missing callback parameter!");
-            }
-            task(...onlyArgs)
-                .then((data: any) => callback(undefined, data))
-                .catch((err: any) => callback(err))
+            onlyArgs.push(arg);
         }
+        if (!callback) {
+            throw new Error("Missing callback parameter!");
+        }
+        task(...onlyArgs)
+            .then((data: any) => callback(undefined, data))
+            .catch((err: any) => callback(err))
     }
 }
