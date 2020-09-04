@@ -1,8 +1,7 @@
 import {HomebridgeAccessoryWrapper} from './accessory-wrapper';
 import {PlatformSettings} from './platform-settings';
 import { HomebridgeContextProxy} from './context-proxy';
-import {API, DynamicPlatformPlugin, PlatformAccessory, PlatformConfig, PlatformPluginConstructor} from "homebridge";
-import {Logging} from "homebridge/lib/logger";
+import {API, DynamicPlatformPlugin, PlatformAccessory, PlatformConfig, Logging} from "homebridge";
 import {HomebridgeContext, HomebridgeContextProps} from "./context";
 
 export type HomebridgeAccessoryWrapperConstructor<AccessoryWrapper extends HomebridgeAccessoryWrapper<Device>, Device> = { new (context: HomebridgeContextProps, accessory: PlatformAccessory, device: Device): AccessoryWrapper };
