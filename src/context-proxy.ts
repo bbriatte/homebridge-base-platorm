@@ -1,34 +1,30 @@
-import {Context, ContextProps} from './context';
-import {Logger} from './logger';
+import {HomebridgeContextProps} from './context';
+import {API, Logging, Characteristic, Service, Accessory} from "homebridge";
 
-export class ContextProxy implements ContextProps {
-    readonly context: Context;
+export class HomebridgeContextProxy implements HomebridgeContextProps {
+    readonly context: HomebridgeContextProps;
 
-    public constructor(context: Context) {
+    public constructor(context: HomebridgeContextProps) {
         this.context = context;
     }
 
-    get log(): Logger {
+    get log(): Logging {
         return this.context.log;
     }
 
-    get homebridge(): any {
-        return this.context.homebridge;
+    get api(): API {
+        return this.context.api;
     }
 
-    get Characteristic(): any {
-        return this.context.Characteristic;
+    get Characteristic(): typeof Characteristic {
+        return this.api.hap.Characteristic;
     }
 
-    get Service(): any {
-        return this.context.Service;
+    get Service(): typeof Service {
+        return this.api.hap.Service;
     }
 
-    get Accessory(): any {
-        return this.context.Accessory;
-    }
-
-    get uuid(): any {
-        return this.context.uuid;
+    get Accessory(): typeof Accessory {
+        return this.api.hap.Accessory;
     }
 }

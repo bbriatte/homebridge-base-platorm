@@ -1,26 +1,26 @@
-import {Logger} from './logger';
 import {HomebridgeAccessoryWrapper} from './accessory-wrapper';
 import {PlatformSettings} from './platform-settings';
-import {Context} from './context';
-import {ContextProxy} from './context-proxy';
-import {PlatformConfig} from './platform-config';
+import { HomebridgeContextProxy} from './context-proxy';
+import {API, DynamicPlatformPlugin, PlatformAccessory, PlatformConfig, PlatformPluginConstructor} from "homebridge";
+import {Logging} from "homebridge/lib/logger";
+import {HomebridgeContext, HomebridgeContextProps} from "./context";
 
-export type HomebridgeAccessoryWrapperConstructor<AccessoryWrapper extends HomebridgeAccessoryWrapper<Device>, Device> = { new (context: Context, accessory: any, device: Device): AccessoryWrapper };
+export type HomebridgeAccessoryWrapperConstructor<AccessoryWrapper extends HomebridgeAccessoryWrapper<Device>, Device> = { new (context: HomebridgeContextProps, accessory: PlatformAccessory, device: Device): AccessoryWrapper };
 
-export abstract class HomebridgePlatform<Config extends PlatformConfig, Device extends {[key: string]: any}, AccessoryWrapper extends HomebridgeAccessoryWrapper<Device>> extends ContextProxy {
+export abstract class HomebridgePlatform<Config extends PlatformConfig, Device, AccessoryWrapper extends HomebridgeAccessoryWrapper<Device>> extends HomebridgeContextProxy implements DynamicPlatformPlugin {
 
     protected readonly config: Config;
     protected readonly settings: PlatformSettings;
     protected readonly accessories: any[]; // homebridge registry
     protected accessoryWrappers: AccessoryWrapper[];
 
-    protected constructor(log: Logger, config: Config, homebridge: any) {
-        super(new Context(log, homebridge));
+    protected constructor(logger: Logging, config: Config, api: API) {
+        super(new HomebridgeContext(logger, api));
         this.settings = this.initPlatformSettings();
         this.config = this.initPlatformConfig(config);
         this.accessories = [];
-        homebridge.on('didFinishLaunching', this.main.bind(this));
-        homebridge.on('shutdown', this.shutdown.bind(this));
+        api.on('didFinishLaunching', this.main.bind(this));
+        api.on('shutdown', this.shutdown.bind(this));
     }
 
     protected initPlatformConfig(config?: Config): Config {
@@ -43,14 +43,14 @@ export abstract class HomebridgePlatform<Config extends PlatformConfig, Device e
     protected async abstract searchDevices(): Promise<Device[]>
 
     protected main(): void {
-        this.context.log('Searching accessories...');
+        this.log('Searching accessories...');
         this.searchAccessories()
             .then((accessories) => {
                 this.accessoryWrappers = accessories;
                 this.clearUnreachableAccessories();
-                this.context.log('Finish searching accessories');
+                this.log('Finish searching accessories');
             })
-            .catch((err) => this.context.log.error(err));
+            .catch((err) => this.log.error(err));
     }
 
     protected shutdown(): void {
@@ -68,20 +68,19 @@ export abstract class HomebridgePlatform<Config extends PlatformConfig, Device e
         if(AccessoryWrapperConstructor === undefined) {
             return undefined;
         }
-        const uuid = this.context.uuid.generate(device[this.settings.deviceKeyMapping.id]);
+        const uuid = this.api.hap.uuid.generate(device[this.settings.deviceKeyMapping.id]);
         const cachedAccessory = this.accessories.find((item) => item.UUID === uuid);
         if(cachedAccessory) {
             return new AccessoryWrapperConstructor(this.context, cachedAccessory, device);
         }
-        const accessory = new this.context.homebridge.platformAccessory(device[this.settings.deviceKeyMapping.name], uuid);
+        const accessory = new this.api.platformAccessory(device[this.settings.deviceKeyMapping.name], uuid);
         const accessoryWrapper = new AccessoryWrapperConstructor(this.context, accessory, device);
         this.configureAccessory(accessory);
-        this.context.homebridge.registerPlatformAccessories(this.settings.plugin, this.settings.name, [accessory]);
+        this.api.registerPlatformAccessories(this.settings.plugin, this.settings.name, [accessory]);
         return accessoryWrapper;
     }
 
-    configureAccessory(accessory: any) {
-        accessory.reachable = true;
+    configureAccessory(accessory: PlatformAccessory) {
         this.accessories.push(accessory);
     }
 
@@ -93,7 +92,7 @@ export abstract class HomebridgePlatform<Config extends PlatformConfig, Device e
         });
         if(unreachableAccessories.length > 0) {
             unreachableAccessories.forEach((acc) => acc.reachable = false);
-            this.context.homebridge.unregisterPlatformAccessories(this.settings.plugin, this.settings.name, unreachableAccessories);
+            this.api.unregisterPlatformAccessories(this.settings.plugin, this.settings.name, unreachableAccessories);
         }
     }
 }

@@ -1,11 +1,13 @@
-import {Context} from './context';
-import {ContextProxy} from './context-proxy';
+import {HomebridgeContextProps} from './context';
+import {HomebridgeContextProxy} from './context-proxy';
+import {PlatformAccessory} from "homebridge";
+import {Service, WithUUID} from "hap-nodejs";
 
-export class HomebridgeAccessoryWrapper<Device> extends ContextProxy {
-    readonly accessory: any;
+export class HomebridgeAccessoryWrapper<Device> extends HomebridgeContextProxy {
+    readonly accessory: PlatformAccessory;
     readonly device: Device;
 
-    public constructor(context: Context, accessory: any, device: Device) {
+    public constructor(context: HomebridgeContextProps, accessory: PlatformAccessory, device: Device) {
         super(context);
         this.accessory = accessory;
         this.device = device;
@@ -15,8 +17,8 @@ export class HomebridgeAccessoryWrapper<Device> extends ContextProxy {
         return this.accessory.displayName;
     }
 
-    public getService(serviceType: any, displayName: string, subType: string): any {
-        const service = this.accessory.getServiceByUUIDAndSubType(serviceType, subType);
+    public getService<T extends WithUUID<typeof Service>>(serviceType: T, displayName: string, subType: string): Service {
+        const service = this.accessory.getServiceById(serviceType, subType);
         if (!service) {
             return this.accessory.addService(serviceType, displayName, subType);
         } else if(service.displayName !== displayName) {
@@ -28,14 +30,14 @@ export class HomebridgeAccessoryWrapper<Device> extends ContextProxy {
         return service;
     }
 
-    public removeService(serviceType: any, subType: string): void {
-        const service = this.accessory.getServiceByUUIDAndSubType(serviceType, subType);
+    public removeService<T extends WithUUID<typeof Service>>(serviceType: T, subType: string): void {
+        const service = this.accessory.getServiceById(serviceType, subType);
         if(service !== undefined) {
             this.accessory.removeService(service);
         }
     }
 
-    public getServices(serviceType: any, condition: (service: any) => boolean): any[] {
+    public getServices<T extends WithUUID<typeof Service>>(serviceType: T, condition: (service: Service) => boolean): Service[] {
         if(this.accessory.services === undefined) {
             return [];
         }
